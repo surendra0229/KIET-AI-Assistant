@@ -1,0 +1,23 @@
+fastapi
+uvicorn[standard]
+pydantic
+pydantic-settings
+python-multipart
+
+# RAG stack
+google-genai
+sentence-transformers
+chromadb
+langchain-text-splitters
+python-docx
+openpyxl
+pypdf
+numpy
+
+# Persistence
+pymongo
+
+# Auth
+bcrypt
+pyjwt
+email-validator
