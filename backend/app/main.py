@@ -3,10 +3,12 @@
 Run locally with:
     uvicorn app.main:app --reload --port 8000
 """
+# pyrefly: ignore [missing-import]
 from fastapi import Depends, FastAPI
 
 from app.middleware.auth import require_admin, require_any_authenticated
 from app.middleware.rate_limit import RateLimitMiddleware
+# pyrefly: ignore [missing-import]
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import (
@@ -77,52 +79,63 @@ def _startup_diagnostics() -> None:
     ok, err = mongo_available()
     if ok:
         log.info("MongoDB: Connected (%s)", settings.mongodb_db)
-        # Ensure per-user chat isolation indexes exist (idempotent).
         try:
             from app.repositories import chats as _chats_repo
             from app.repositories import messages as _messages_repo
+
             _chats_repo.ensure_indexes()
             _messages_repo.ensure_indexes()
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             log.warning("Chat index bootstrap skipped: %s", e)
     else:
         log.warning("MongoDB: NOT CONNECTED — %s", err)
 
-    # ── Embedding Model ──────────────────────────────────────────────────
-    # Pre-warm here so the first /chat request pays zero model-load cost.
-    try:
-        from app.services.embeddings import get_embedder
-        embedder = get_embedder()
-        log.info(
-            "Embedding Model: Loaded (%s, dim=%d)",
-            settings.embedding_model,
-            embedder.dim,
-        )
-    except Exception as e:  # noqa: BLE001
-        log.warning("Embedding Model: FAILED to pre-load — %s", e)
+    # ================================================================
+    # EMBEDDING MODEL PRELOAD DISABLED FOR RENDER FREE PLAN
+    # This reduces memory usage during startup.
+    # The embedding model will be loaded automatically
+    # when it is first needed.
+    # ================================================================
 
-    # ── ChromaDB ─────────────────────────────────────────────────────────
-    # Pre-warm so the collection is opened once and reused for all requests.
-    try:
-        from app.services.vectordb import get_vector_store
-        store = get_vector_store()
-        log.info(
-            "ChromaDB: Ready (%s, %d items)",
-            settings.chroma_collection,
-            store.count(),
-        )
-    except Exception as e:  # noqa: BLE001
-        log.warning("ChromaDB: FAILED to pre-load — %s", e)
+    # try:
+    #     from app.services.embeddings import get_embedder
+    #     embedder = get_embedder()
+    #     log.info(
+    #         "Embedding Model: Loaded (%s, dim=%d)",
+    #         settings.embedding_model,
+    #         embedder.dim,
+    #     )
+    # except Exception as e:
+    #     log.warning("Embedding Model: FAILED to pre-load — %s", e)
+
+    # ================================================================
+    # CHROMADB PRELOAD DISABLED FOR RENDER FREE PLAN
+    # This also helps reduce startup memory usage.
+    # ================================================================
+
+    # try:
+    #     from app.services.vectordb import get_vector_store
+    #     store = get_vector_store()
+    #     log.info(
+    #         "ChromaDB: Ready (%s, %d items)",
+    #         settings.chroma_collection,
+    #         store.count(),
+    #     )
+    # except Exception as e:
+    #     log.warning("ChromaDB: FAILED to pre-load — %s", e)
 
     # ── Gemini ───────────────────────────────────────────────────────────
     if not settings.gemini_api_key:
-        log.warning("Gemini: NOT CONFIGURED — GEMINI_API_KEY missing, /chat will return 503")
+        log.warning(
+            "Gemini: NOT CONFIGURED — GEMINI_API_KEY missing, /chat will return 503"
+        )
     else:
         try:
             from app.services.llm.gemini import _model as _gemini_model
+
             _gemini_model()
             log.info("Gemini: Ready (%s)", settings.gemini_model)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             log.warning("Gemini: FAILED to pre-load — %s", e)
 
     # ── Auth ─────────────────────────────────────────────────────────────
@@ -135,4 +148,8 @@ def _startup_diagnostics() -> None:
 
 @app.get("/")
 def root() -> dict:
-    return {"name": "KIET AI Assistant API", "version": "1.3.0", "docs": "/docs"}
+    return {
+        "name": "KIET AI Assistant API",
+        "version": "1.3.0",
+        "docs": "/docs",
+    }
