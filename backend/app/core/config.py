@@ -8,11 +8,16 @@ class Settings(BaseSettings):
     """Application configuration loaded from env vars / .env file."""
 
     app_env: str = "development"
+
+    # Allowed frontend origins
     cors_origins: list[str] = [
         "http://localhost:5173",
         "http://localhost:8080",
         "http://localhost:8081",
         "http://localhost:3000",
+
+        # Vercel Frontend
+        "https://kiet-ai-assistant.vercel.app",
     ]
 
     # AI stack
@@ -43,7 +48,7 @@ class Settings(BaseSettings):
     super_admin_email: str = "surendrachennamalli177@gmail.com"
     super_admin_password: str = "surendra@123"
 
-    # SMTP (placeholders — email delivery not yet wired)
+    # SMTP (placeholders)
     smtp_host: str = ""
     smtp_port: int = 587
     smtp_username: str = ""
